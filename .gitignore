@@ -1,0 +1,9 @@
+# Ignorar o ambiente virtual
+venv/
+
+# Ignorar ficheiros de cache do Python
+__pycache__/
+*.pyc
+
+# Ignorar ficheiros do sistema macOS
+.DS_Store
