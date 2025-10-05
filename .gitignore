@@ -7,3 +7,7 @@ __pycache__/
 
 # Ignorar ficheiros do sistema macOS
 .DS_Store
+
+base_observatorio_teresopolis.csv
+base_observatorio_teresopolis_old.csv
+base_observatorio_teresopolis_spacy.csv
