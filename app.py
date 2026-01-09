@@ -63,6 +63,97 @@ st.markdown("""
 st.markdown('<h1 class="main-header">🏛️ Observatório Legislativo de Teresópolis</h1>', unsafe_allow_html=True)
 st.markdown('<p class="sub-header">Sistema de Monitoramento de Projetos de Lei - Câmara Municipal</p>', unsafe_allow_html=True)
 
+# --- Dicionário de normalização de nomes de vereadores ---
+NORMALIZACAO_VEREADORES = {
+    # Vitinho Nogueira
+    'Vitim Nogueira': 'Vitinho Nogueira',
+    'Vitin Nogueira': 'Vitinho Nogueira',
+    'Vitinho': 'Vitinho Nogueira',
+    # Dudu do Resgate
+    'Dudo Resgate': 'Dudu do Resgate',
+    'Dudu do': 'Dudu do Resgate',
+    # Caio Perfister
+    'Caio Perfester': 'Caio Perfister',
+    'Caio Perfist': 'Caio Perfister',
+    'Caio Perfiste': 'Caio Perfister',
+    'Caio Perfisti': 'Caio Perfister',
+    'Caip Fister': 'Caio Perfister',
+    # Igor Faraco
+    'Ico Faraco à Comissão de Legislação': 'Igor Faraco',
+    # Cacau Repórter
+    'Cacau': 'Cacau Repórter',
+    # Fidel Faria
+    'Fidel': 'Fidel Faria',
+    # Luciano Santos
+    'Luciano': 'Luciano Santos',
+    # João Miguel
+    'João': 'João Miguel',
+    # Marcos Rangel
+    'Rangel': 'Marcos Rangel',
+    # Maurício Lopes
+    'Maurício': 'Maurício Lopes',
+    # Totó
+    'Totó Online': 'Totó',
+    'Total online': 'Totó',
+    # Amanda
+    'da vereadora professora Amanda': 'Amanda',
+    'professor Amanda': 'Amanda',
+}
+
+# --- Categorização de PLs por tema ---
+TEMAS_KEYWORDS = {
+    'Saúde': ['saúde', 'hospital', 'ubs', 'médico', 'enfermeiro', 'vacina', 'doença', 'atendimento médico', 'posto de saúde'],
+    'Educação': ['educação', 'escola', 'professor', 'aluno', 'creche', 'ensino', 'educacional', 'estudante'],
+    'Infraestrutura': ['obra', 'pavimentação', 'asfalto', 'ponte', 'estrada', 'iluminação', 'saneamento', 'água', 'esgoto'],
+    'Transporte': ['transporte', 'ônibus', 'trânsito', 'mobilidade', 'passagem', 'rodoviária'],
+    'Meio Ambiente': ['meio ambiente', 'ambiental', 'árvore', 'verde', 'ecológico', 'sustentável', 'reciclagem', 'lixo'],
+    'Cultura e Lazer': ['cultura', 'cultural', 'esporte', 'lazer', 'evento', 'festa', 'turismo', 'parque'],
+    'Segurança': ['segurança', 'guarda', 'policial', 'vigilância', 'câmera', 'monitoramento'],
+    'Assistência Social': ['social', 'assistência', 'carente', 'vulnerável', 'benefício', 'auxílio'],
+    'Tributos e Finanças': ['iptu', 'iss', 'imposto', 'taxa', 'tributo', 'fiscal', 'isenção', 'desconto'],
+    'Homenagens': ['homenagem', 'título', 'mérito', 'utilidade pública', 'denominação', 'nome de rua'],
+    'Administrativo': ['servidor', 'funcionário', 'cargo', 'salário', 'administrativo', 'licitação', 'contrato'],
+}
+
+def normalizar_autor(autor):
+    """Normaliza o nome do autor usando o dicionário de mapeamento."""
+    if not autor or autor == 'nan':
+        return 'Autor não identificado'
+
+    # Remove texto extra após o nome (padrões comuns de erro de OCR)
+    for padrao in ['altera a lei', 'institui o programa', 'dispõe sobre']:
+        if padrao in autor.lower():
+            autor = autor.split(padrao)[0].strip()
+
+    # Aplica normalização direta
+    if autor in NORMALIZACAO_VEREADORES:
+        return NORMALIZACAO_VEREADORES[autor]
+
+    # Tenta normalização parcial
+    for variante, correto in NORMALIZACAO_VEREADORES.items():
+        if variante.lower() in autor.lower():
+            return correto
+
+    return autor
+
+def categorizar_pl(ementa):
+    """Categoriza um PL baseado em palavras-chave na ementa."""
+    if not ementa or ementa == 'Não disponível':
+        return 'Não categorizado'
+
+    ementa_lower = ementa.lower()
+    temas_encontrados = []
+
+    for tema, keywords in TEMAS_KEYWORDS.items():
+        for keyword in keywords:
+            if keyword in ementa_lower:
+                temas_encontrados.append(tema)
+                break
+
+    if temas_encontrados:
+        return temas_encontrados[0]  # Retorna o primeiro tema encontrado
+    return 'Outros'
+
 # --- Função para carregar dados ---
 @st.cache_data
 def carregar_dados():
@@ -98,6 +189,12 @@ def carregar_dados():
         df['Link YouTube'] = ''
     else:
         df['Link YouTube'] = df['Link YouTube'].fillna('').astype(str).str.strip()
+
+    # Normaliza nomes de vereadores
+    df['Autor'] = df['Autor'].apply(normalizar_autor)
+
+    # Categoriza PLs por tema
+    df['Tema'] = df['Ementa'].apply(categorizar_pl)
 
     # Remove registros com datas inválidas ou muito antigas
     df = df[df['Data Sessão'].notna()]
@@ -186,6 +283,19 @@ with st.sidebar:
     st.subheader('📋 Projeto de Lei')
     pl_especifico = st.text_input('Digite o número do PL (ex: 123/2025):', '')
 
+    # Filtro por tema
+    st.subheader('🏷️ Tema')
+    temas_disponiveis = sorted(df_filtrado['Tema'].unique())
+    tema_selecionado = st.multiselect(
+        'Selecione o(s) Tema(s):',
+        options=temas_disponiveis,
+        default=[]
+    )
+
+    # Busca por ementa
+    st.subheader('📄 Busca na Ementa')
+    busca_ementa_sidebar = st.text_input('Buscar na ementa:', '', key='busca_ementa_sidebar')
+
     # Aplicação dos filtros
     if autor_selecionado:
         df_filtrado = df_filtrado[df_filtrado['Autor'].isin(autor_selecionado)]
@@ -193,6 +303,10 @@ with st.sidebar:
         df_filtrado = df_filtrado[df_filtrado['Status'].isin(status_selecionado)]
     if pl_especifico:
         df_filtrado = df_filtrado[df_filtrado['PL'].str.contains(pl_especifico, case=False, na=False)]
+    if tema_selecionado:
+        df_filtrado = df_filtrado[df_filtrado['Tema'].isin(tema_selecionado)]
+    if busca_ementa_sidebar:
+        df_filtrado = df_filtrado[df_filtrado['Ementa'].str.contains(busca_ementa_sidebar, case=False, na=False)]
 
     # Botão de reset
     if st.button('🔄 Limpar Filtros'):
@@ -297,22 +411,60 @@ with tab1:
             fig_temporal.update_layout(showlegend=False)
             st.plotly_chart(fig_temporal, use_container_width=True)
 
-    # Top 10 Vereadores
-    st.subheader('🏆 Top 10 Vereadores Mais Ativos')
-    if not df_filtrado.empty:
-        top_vereadores = df_filtrado['Autor'].value_counts().head(10)
+    # Segunda linha de gráficos
+    col3, col4 = st.columns(2)
 
-        fig_bar = px.bar(
-            x=top_vereadores.values,
-            y=top_vereadores.index,
-            orientation='h',
-            title='Projetos de Lei por Vereador',
-            labels={'x': 'Quantidade de PLs', 'y': 'Vereador'},
-            color=top_vereadores.values,
-            color_continuous_scale='viridis'
-        )
-        fig_bar.update_layout(showlegend=False, height=400)
-        st.plotly_chart(fig_bar, use_container_width=True)
+    with col3:
+        # Top 10 Vereadores
+        st.subheader('🏆 Top 10 Vereadores Mais Ativos')
+        if not df_filtrado.empty:
+            top_vereadores = df_filtrado['Autor'].value_counts().head(10)
+
+            fig_bar = px.bar(
+                x=top_vereadores.values,
+                y=top_vereadores.index,
+                orientation='h',
+                title='Projetos de Lei por Vereador',
+                labels={'x': 'Quantidade de PLs', 'y': 'Vereador'},
+                color=top_vereadores.values,
+                color_continuous_scale='viridis'
+            )
+            fig_bar.update_layout(showlegend=False, height=400)
+            st.plotly_chart(fig_bar, use_container_width=True)
+
+    with col4:
+        # Distribuição por Tema
+        st.subheader('🏷️ Distribuição por Tema')
+        if not df_filtrado.empty:
+            temas_count = df_filtrado['Tema'].value_counts()
+
+            # Cores para cada tema
+            cores_temas = {
+                'Saúde': '#e74c3c',
+                'Educação': '#3498db',
+                'Infraestrutura': '#f39c12',
+                'Transporte': '#9b59b6',
+                'Meio Ambiente': '#27ae60',
+                'Cultura e Lazer': '#e91e63',
+                'Segurança': '#34495e',
+                'Assistência Social': '#1abc9c',
+                'Tributos e Finanças': '#f1c40f',
+                'Homenagens': '#ff9800',
+                'Administrativo': '#607d8b',
+                'Outros': '#95a5a6',
+                'Não categorizado': '#bdc3c7'
+            }
+
+            fig_temas = px.pie(
+                temas_count.reset_index(),
+                values='count',
+                names='Tema',
+                title='PLs por Tema',
+                color='Tema',
+                color_discrete_map=cores_temas
+            )
+            fig_temas.update_traces(textposition='inside', textinfo='percent+label')
+            st.plotly_chart(fig_temas, use_container_width=True)
 
 # --- Tab 2: Dados Detalhados ---
 with tab2:
@@ -362,36 +514,61 @@ with tab2:
             for idx, row in df_com_youtube.drop_duplicates(subset=['Link YouTube']).head(20).iterrows():
                 st.markdown(f"- [{row['Data Sessão'].strftime('%d/%m/%Y')} - Sessão]({row['Link YouTube']})")
 
-    # Opção de download
-    csv = df_ordenado.to_csv(index=False)
-    st.download_button(
-        label="📥 Baixar dados em CSV",
-        data=csv,
-        file_name=f'observatorio_teresopolis_{datetime.now().strftime("%Y%m%d")}.csv',
-        mime='text/csv'
-    )
+    # Opções de download
+    st.subheader('📥 Exportar Dados')
+    col_download1, col_download2 = st.columns(2)
+
+    with col_download1:
+        csv = df_ordenado.to_csv(index=False)
+        st.download_button(
+            label="📥 Baixar CSV",
+            data=csv,
+            file_name=f'observatorio_teresopolis_{datetime.now().strftime("%Y%m%d")}.csv',
+            mime='text/csv'
+        )
+
+    with col_download2:
+        # Exportação JSON para dados abertos
+        df_json = df_ordenado.copy()
+        df_json['Data Sessão'] = df_json['Data Sessão'].dt.strftime('%Y-%m-%d')
+        json_data = df_json.to_json(orient='records', force_ascii=False, indent=2)
+        st.download_button(
+            label="📥 Baixar JSON (API)",
+            data=json_data,
+            file_name=f'observatorio_teresopolis_{datetime.now().strftime("%Y%m%d")}.json',
+            mime='application/json'
+        )
 
 # --- Tab 3: Ementas ---
 with tab3:
     st.subheader('📜 Consulta de Ementas dos Projetos de Lei')
 
-    # Campo de busca por ementa
-    busca_ementa = st.text_input(
-        '🔍 Buscar por conteúdo da ementa:',
-        placeholder='Ex: saúde, educação, IPTU, zoneamento...',
-        key='busca_ementa'
-    )
+    # Filtros específicos da aba
+    col_busca1, col_busca2 = st.columns([2, 1])
+    with col_busca1:
+        busca_ementa = st.text_input(
+            '🔍 Buscar por conteúdo da ementa:',
+            placeholder='Ex: saúde, educação, IPTU, zoneamento...',
+            key='busca_ementa'
+        )
+    with col_busca2:
+        filtro_tema = st.selectbox(
+            '🏷️ Filtrar por tema:',
+            ['Todos'] + sorted(df_filtrado['Tema'].unique().tolist()),
+            key='filtro_tema_ementas'
+        )
 
-    # Filtrar por ementa
+    # Filtrar por ementa e tema
+    df_ementas = df_filtrado.copy()
     if busca_ementa:
-        df_ementas = df_filtrado[
-            df_filtrado['Ementa'].str.contains(busca_ementa, case=False, na=False)
+        df_ementas = df_ementas[
+            df_ementas['Ementa'].str.contains(busca_ementa, case=False, na=False)
         ]
-    else:
-        df_ementas = df_filtrado.copy()
+    if filtro_tema != 'Todos':
+        df_ementas = df_ementas[df_ementas['Tema'] == filtro_tema]
 
     # Estatísticas de ementas
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         total_ementas = len(df_ementas[df_ementas['Ementa'] != 'Não disponível'])
         st.metric("📜 PLs com Ementa", total_ementas)
@@ -399,8 +576,11 @@ with tab3:
         pls_sem_ementa = len(df_ementas[df_ementas['Ementa'] == 'Não disponível'])
         st.metric("❓ PLs sem Ementa", pls_sem_ementa)
     with col3:
-        if busca_ementa:
-            st.metric("🔍 Resultados da Busca", len(df_ementas))
+        temas_encontrados = df_ementas['Tema'].nunique()
+        st.metric("🏷️ Temas", temas_encontrados)
+    with col4:
+        if busca_ementa or filtro_tema != 'Todos':
+            st.metric("🔍 Resultados", len(df_ementas))
 
     st.divider()
 
@@ -408,16 +588,37 @@ with tab3:
     pls_unicos = df_ementas.drop_duplicates(subset=['PL']).sort_values('Data Sessão', ascending=False)
 
     if not pls_unicos.empty:
-        st.markdown(f"**Mostrando {len(pls_unicos)} projetos de lei únicos**")
+        # Paginação
+        itens_por_pagina = 20
+        total_paginas = (len(pls_unicos) - 1) // itens_por_pagina + 1
 
-        for idx, row in pls_unicos.head(50).iterrows():
+        col_pag1, col_pag2 = st.columns([3, 1])
+        with col_pag1:
+            st.markdown(f"**Total: {len(pls_unicos)} projetos de lei únicos**")
+        with col_pag2:
+            pagina_atual = st.number_input(
+                'Página',
+                min_value=1,
+                max_value=total_paginas,
+                value=1,
+                key='pagina_ementas'
+            )
+
+        inicio = (pagina_atual - 1) * itens_por_pagina
+        fim = inicio + itens_por_pagina
+        pls_pagina = pls_unicos.iloc[inicio:fim]
+
+        st.caption(f"Mostrando {inicio + 1} a {min(fim, len(pls_unicos))} de {len(pls_unicos)} | Página {pagina_atual} de {total_paginas}")
+
+        for idx, row in pls_pagina.iterrows():
             with st.container():
                 col1, col2 = st.columns([3, 1])
 
                 with col1:
-                    st.markdown(f"### PL {row['PL']}")
-                    st.markdown(f"**Autor:** {row['Autor']}")
-                    st.markdown(f"**Status:** {row['Status']}")
+                    # Badge do tema
+                    tema_badge = f"🏷️ {row['Tema']}" if row['Tema'] != 'Não categorizado' else ''
+                    st.markdown(f"### PL {row['PL']} {tema_badge}")
+                    st.markdown(f"**Autor:** {row['Autor']} | **Status:** {row['Status']}")
 
                     # Exibir ementa com destaque
                     ementa_texto = row['Ementa'] if row['Ementa'] != 'Não disponível' else '*Ementa não disponível*'
