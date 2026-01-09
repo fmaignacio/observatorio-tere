@@ -392,7 +392,7 @@ with tab1:
                 }
             )
             fig_status.update_traces(textposition='inside', textinfo='percent+label')
-            st.plotly_chart(fig_status, use_container_width=True)
+            st.plotly_chart(fig_status, width='stretch')
 
     with col2:
         # Gráfico de PLs por Mês
@@ -409,7 +409,7 @@ with tab1:
             )
             fig_temporal.update_traces(mode='lines+markers')
             fig_temporal.update_layout(showlegend=False)
-            st.plotly_chart(fig_temporal, use_container_width=True)
+            st.plotly_chart(fig_temporal, width='stretch')
 
     # Segunda linha de gráficos
     col3, col4 = st.columns(2)
@@ -430,7 +430,7 @@ with tab1:
                 color_continuous_scale='viridis'
             )
             fig_bar.update_layout(showlegend=False, height=400)
-            st.plotly_chart(fig_bar, use_container_width=True)
+            st.plotly_chart(fig_bar, width='stretch')
 
     with col4:
         # Distribuição por Tema
@@ -464,7 +464,7 @@ with tab1:
                 color_discrete_map=cores_temas
             )
             fig_temas.update_traces(textposition='inside', textinfo='percent+label')
-            st.plotly_chart(fig_temas, use_container_width=True)
+            st.plotly_chart(fig_temas, width='stretch')
 
 # --- Tab 2: Dados Detalhados ---
 with tab2:
@@ -499,7 +499,7 @@ with tab2:
     # Exibir dados
     st.dataframe(
         df_ordenado[colunas_exibir],
-        use_container_width=True,
+        width='stretch',
         height=500,
         column_config={
             "Data Sessão": st.column_config.DateColumn("Data", format="DD/MM/YYYY"),
@@ -679,7 +679,7 @@ with tab4:
                 names='Status',
                 title=f'Status dos PLs - {vereador_analise}'
             )
-            st.plotly_chart(fig_status_vereador, use_container_width=True)
+            st.plotly_chart(fig_status_vereador, width='stretch')
 
         with col2:
             # Evolução temporal do vereador
@@ -693,13 +693,13 @@ with tab4:
                     title=f'PLs por Mês - {vereador_analise}',
                     labels={'x': 'Mês', 'y': 'Quantidade'}
                 )
-                st.plotly_chart(fig_temporal_vereador, use_container_width=True)
+                st.plotly_chart(fig_temporal_vereador, width='stretch')
 
         # Lista de PLs do vereador
         st.subheader(f'📋 Projetos de Lei - {vereador_analise}')
         st.dataframe(
             df_vereador[['Data Sessão', 'PL', 'Ementa', 'Status']].sort_values('Data Sessão', ascending=False),
-            use_container_width=True,
+            width='stretch',
             column_config={
                 "Data Sessão": st.column_config.DateColumn("Data", format="DD/MM/YYYY"),
                 "Ementa": st.column_config.TextColumn("Ementa", width="large"),
@@ -830,7 +830,7 @@ with tab6:
                     st.markdown("**Histórico:**")
                     st.dataframe(
                         df_pl_busca[['Data Sessão', 'Status', 'Fonte']].sort_values('Data Sessão'),
-                        use_container_width=True,
+                        width='stretch',
                         hide_index=True
                     )
         else:
@@ -868,7 +868,7 @@ with tab7:
                    'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'][:len(pivot_table)],
                 color_continuous_scale='YlOrRd'
             )
-            st.plotly_chart(fig_heatmap, use_container_width=True)
+            st.plotly_chart(fig_heatmap, width='stretch')
 
         with col2:
             # Taxa de aprovação por vereador
@@ -902,7 +902,7 @@ with tab7:
                     color_continuous_scale='RdYlGn'
                 )
                 fig_taxa.update_traces(texttemplate='%{text} PLs', textposition='inside')
-                st.plotly_chart(fig_taxa, use_container_width=True)
+                st.plotly_chart(fig_taxa, width='stretch')
 
         # Análise de correlação
         st.markdown("### 🔗 Análise de Parcerias")
@@ -939,7 +939,7 @@ with tab7:
                     orientation='h',
                     title='Vereadores que Mais Apresentam PLs nas Mesmas Sessões'
                 )
-                st.plotly_chart(fig_parcerias, use_container_width=True)
+                st.plotly_chart(fig_parcerias, width='stretch')
 
 # --- Rodapé ---
 st.divider()
