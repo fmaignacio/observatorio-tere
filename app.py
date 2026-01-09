@@ -67,14 +67,18 @@ st.markdown('<p class="sub-header">Sistema de Monitoramento de Projetos de Lei -
 @st.cache_data
 def carregar_dados():
     try:
-        # Tenta carregar o arquivo completo primeiro
-        df = pd.read_csv('base_observatorio_teresopolis_COMPLETA.csv')
+        # Tenta carregar o arquivo com ementas primeiro (versão mais completa)
+        df = pd.read_csv('csv/base_observatorio_teresopolis_COM_EMENTAS.csv')
     except:
         try:
-            # Se não encontrar, tenta o arquivo básico
-            df = pd.read_csv('base_observatorio_teresopolis.csv')
-        except FileNotFoundError:
-            return None
+            # Fallback para o arquivo completo
+            df = pd.read_csv('base_observatorio_teresopolis_COMPLETA.csv')
+        except:
+            try:
+                # Último fallback para o arquivo básico
+                df = pd.read_csv('base_observatorio_teresopolis.csv')
+            except FileNotFoundError:
+                return None
 
     # Garante que a coluna de data seja tratada como data
     df['Data Sessão'] = pd.to_datetime(df['Data Sessão'], errors='coerce')
@@ -83,6 +87,17 @@ def carregar_dados():
     df['PL'] = df['PL'].astype(str).str.strip()
     df['Autor'] = df['Autor'].astype(str).str.strip()
     df['Status'] = df['Status'].astype(str).str.strip()
+
+    # Garante que as novas colunas existam
+    if 'Ementa' not in df.columns:
+        df['Ementa'] = 'Não disponível'
+    else:
+        df['Ementa'] = df['Ementa'].fillna('Não disponível').astype(str).str.strip()
+
+    if 'Link YouTube' not in df.columns:
+        df['Link YouTube'] = ''
+    else:
+        df['Link YouTube'] = df['Link YouTube'].fillna('').astype(str).str.strip()
 
     # Remove registros com datas inválidas ou muito antigas
     df = df[df['Data Sessão'].notna()]
@@ -236,9 +251,9 @@ with col5:
 st.divider()
 
 # --- Abas principais ---
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-    "📊 Dashboard", "📋 Dados Detalhados", "👥 Análise por Vereador",
-    "📈 Linha do Tempo", "🔍 Busca de PL", "📊 Estatísticas Avançadas"
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+    "📊 Dashboard", "📋 Dados Detalhados", "📜 Ementas",
+    "👥 Análise por Vereador", "📈 Linha do Tempo", "🔍 Busca de PL", "📊 Estatísticas Avançadas"
 ])
 
 # --- Tab 1: Dashboard ---
@@ -315,6 +330,8 @@ with tab2:
             'Ordem:',
             ['Decrescente', 'Crescente']
         )
+    with col3:
+        mostrar_ementa = st.checkbox('Mostrar Ementa', value=True)
 
     # Aplicar ordenação
     df_ordenado = df_filtrado.sort_values(
@@ -322,12 +339,28 @@ with tab2:
         ascending=(ordem == 'Crescente')
     )
 
+    # Colunas a exibir
+    colunas_exibir = ['Data Sessão', 'PL', 'Autor', 'Status']
+    if mostrar_ementa:
+        colunas_exibir.insert(3, 'Ementa')
+
     # Exibir dados
     st.dataframe(
-        df_ordenado[['Data Sessão', 'PL', 'Autor', 'Status', 'Presentes', 'Fonte']],
+        df_ordenado[colunas_exibir],
         use_container_width=True,
-        height=500
+        height=500,
+        column_config={
+            "Data Sessão": st.column_config.DateColumn("Data", format="DD/MM/YYYY"),
+            "Ementa": st.column_config.TextColumn("Ementa", width="large"),
+        }
     )
+
+    # Links do YouTube disponíveis
+    df_com_youtube = df_ordenado[df_ordenado['Link YouTube'].str.len() > 0]
+    if not df_com_youtube.empty:
+        with st.expander(f"🎬 {len(df_com_youtube)} sessões com vídeo disponível no YouTube"):
+            for idx, row in df_com_youtube.drop_duplicates(subset=['Link YouTube']).head(20).iterrows():
+                st.markdown(f"- [{row['Data Sessão'].strftime('%d/%m/%Y')} - Sessão]({row['Link YouTube']})")
 
     # Opção de download
     csv = df_ordenado.to_csv(index=False)
@@ -338,8 +371,71 @@ with tab2:
         mime='text/csv'
     )
 
-# --- Tab 3: Análise por Vereador ---
+# --- Tab 3: Ementas ---
 with tab3:
+    st.subheader('📜 Consulta de Ementas dos Projetos de Lei')
+
+    # Campo de busca por ementa
+    busca_ementa = st.text_input(
+        '🔍 Buscar por conteúdo da ementa:',
+        placeholder='Ex: saúde, educação, IPTU, zoneamento...',
+        key='busca_ementa'
+    )
+
+    # Filtrar por ementa
+    if busca_ementa:
+        df_ementas = df_filtrado[
+            df_filtrado['Ementa'].str.contains(busca_ementa, case=False, na=False)
+        ]
+    else:
+        df_ementas = df_filtrado.copy()
+
+    # Estatísticas de ementas
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        total_ementas = len(df_ementas[df_ementas['Ementa'] != 'Não disponível'])
+        st.metric("📜 PLs com Ementa", total_ementas)
+    with col2:
+        pls_sem_ementa = len(df_ementas[df_ementas['Ementa'] == 'Não disponível'])
+        st.metric("❓ PLs sem Ementa", pls_sem_ementa)
+    with col3:
+        if busca_ementa:
+            st.metric("🔍 Resultados da Busca", len(df_ementas))
+
+    st.divider()
+
+    # Agrupar por PL único e mostrar ementas
+    pls_unicos = df_ementas.drop_duplicates(subset=['PL']).sort_values('Data Sessão', ascending=False)
+
+    if not pls_unicos.empty:
+        st.markdown(f"**Mostrando {len(pls_unicos)} projetos de lei únicos**")
+
+        for idx, row in pls_unicos.head(50).iterrows():
+            with st.container():
+                col1, col2 = st.columns([3, 1])
+
+                with col1:
+                    st.markdown(f"### PL {row['PL']}")
+                    st.markdown(f"**Autor:** {row['Autor']}")
+                    st.markdown(f"**Status:** {row['Status']}")
+
+                    # Exibir ementa com destaque
+                    ementa_texto = row['Ementa'] if row['Ementa'] != 'Não disponível' else '*Ementa não disponível*'
+                    st.info(f"📄 **Ementa:** {ementa_texto}")
+
+                with col2:
+                    st.markdown(f"**Data:** {row['Data Sessão'].strftime('%d/%m/%Y')}")
+
+                    # Link do YouTube se disponível
+                    if row['Link YouTube'] and len(row['Link YouTube']) > 0:
+                        st.markdown(f"[🎬 Assistir Sessão]({row['Link YouTube']})")
+
+                st.divider()
+    else:
+        st.warning("Nenhum projeto de lei encontrado com os filtros aplicados.")
+
+# --- Tab 4: Análise por Vereador ---
+with tab4:
     st.subheader('👥 Análise Detalhada por Vereador')
 
     if not df_filtrado.empty:
@@ -401,12 +497,23 @@ with tab3:
         # Lista de PLs do vereador
         st.subheader(f'📋 Projetos de Lei - {vereador_analise}')
         st.dataframe(
-            df_vereador[['Data Sessão', 'PL', 'Status']].sort_values('Data Sessão', ascending=False),
-            use_container_width=True
+            df_vereador[['Data Sessão', 'PL', 'Ementa', 'Status']].sort_values('Data Sessão', ascending=False),
+            use_container_width=True,
+            column_config={
+                "Data Sessão": st.column_config.DateColumn("Data", format="DD/MM/YYYY"),
+                "Ementa": st.column_config.TextColumn("Ementa", width="large"),
+            }
         )
 
-# --- Tab 4: Linha do Tempo ---
-with tab4:
+        # Links do YouTube para sessões do vereador
+        df_vereador_youtube = df_vereador[df_vereador['Link YouTube'].str.len() > 0]
+        if not df_vereador_youtube.empty:
+            with st.expander(f"🎬 Sessões com vídeo ({len(df_vereador_youtube.drop_duplicates(subset=['Link YouTube']))})"):
+                for idx, row in df_vereador_youtube.drop_duplicates(subset=['Link YouTube']).iterrows():
+                    st.markdown(f"- [{row['Data Sessão'].strftime('%d/%m/%Y')}]({row['Link YouTube']}) - PL {row['PL']}")
+
+# --- Tab 5: Linha do Tempo ---
+with tab5:
     st.subheader('📈 Linha do Tempo de Projetos de Lei')
 
     # Seletor de PL para timeline
@@ -421,7 +528,7 @@ with tab4:
 
         if not df_pl.empty:
             # Informações do PL
-            col1, col2, col3 = st.columns(3)
+            col1, col2, col3, col4 = st.columns(4)
 
             with col1:
                 st.metric("Autor", df_pl.iloc[0]['Autor'])
@@ -433,12 +540,21 @@ with tab4:
                 dias_tramitacao = (df_pl.iloc[-1]['Data Sessão'] - df_pl.iloc[0]['Data Sessão']).days
                 st.metric("Dias em Tramitação", dias_tramitacao)
 
+            with col4:
+                total_mencoes = len(df_pl)
+                st.metric("Menções em Sessões", total_mencoes)
+
+            # Ementa do PL
+            ementa_pl = df_pl.iloc[0]['Ementa']
+            if ementa_pl and ementa_pl != 'Não disponível':
+                st.info(f"📄 **Ementa:** {ementa_pl}")
+
             # Timeline
             st.markdown("### 📅 Histórico do PL")
 
             for idx, row in df_pl.iterrows():
                 with st.container():
-                    col1, col2 = st.columns([1, 4])
+                    col1, col2, col3 = st.columns([1, 3, 1])
 
                     with col1:
                         st.markdown(f"**{row['Data Sessão'].strftime('%d/%m/%Y')}**")
@@ -455,21 +571,27 @@ with tab4:
                         st.markdown(f"{status_emoji} **{row['Status']}**")
                         st.caption(f"Fonte: {row['Fonte']}")
 
+                    with col3:
+                        # Link do YouTube
+                        if row['Link YouTube'] and len(row['Link YouTube']) > 0:
+                            st.markdown(f"[🎬 Ver Sessão]({row['Link YouTube']})")
+
                     st.divider()
 
-# --- Tab 5: Busca de PL ---
-with tab5:
+# --- Tab 6: Busca de PL ---
+with tab6:
     st.subheader('🔍 Busca Avançada de Projetos de Lei')
 
     # Campo de busca
     busca_termo = st.text_input('Digite o número do PL ou termo de busca:', '')
 
     if busca_termo:
-        # Buscar em todos os campos
+        # Buscar em todos os campos incluindo ementa
         df_busca = df[
             (df['PL'].str.contains(busca_termo, case=False, na=False)) |
             (df['Autor'].str.contains(busca_termo, case=False, na=False)) |
-            (df['Status'].str.contains(busca_termo, case=False, na=False))
+            (df['Status'].str.contains(busca_termo, case=False, na=False)) |
+            (df['Ementa'].str.contains(busca_termo, case=False, na=False))
         ]
 
         if not df_busca.empty:
@@ -493,6 +615,16 @@ with tab5:
                         st.markdown(f"**Status Atual:** {df_pl_busca.iloc[-1]['Status']}")
                         st.markdown(f"**Última Menção:** {df_pl_busca['Data Sessão'].max().strftime('%d/%m/%Y')}")
 
+                    # Ementa do PL
+                    ementa_busca = df_pl_busca.iloc[0]['Ementa']
+                    if ementa_busca and ementa_busca != 'Não disponível':
+                        st.info(f"📄 **Ementa:** {ementa_busca}")
+
+                    # Link do YouTube
+                    youtube_link = df_pl_busca[df_pl_busca['Link YouTube'].str.len() > 0]['Link YouTube']
+                    if not youtube_link.empty:
+                        st.markdown(f"🎬 [Assistir última sessão no YouTube]({youtube_link.iloc[-1]})")
+
                     # Histórico
                     st.markdown("**Histórico:**")
                     st.dataframe(
@@ -503,8 +635,8 @@ with tab5:
         else:
             st.warning("Nenhum resultado encontrado")
 
-# --- Tab 6: Estatísticas Avançadas ---
-with tab6:
+# --- Tab 7: Estatísticas Avançadas ---
+with tab7:
     st.subheader('📊 Estatísticas Avançadas')
 
     if not df_filtrado.empty:
