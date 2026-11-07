@@ -20,6 +20,7 @@ from eleitoral.ingest.column_mappings import (
     NM_MUNICIPIO_TERESOPOLIS,
 )
 from eleitoral.ingest.download import RAW_DIR, download_zip, zip_name
+from eleitoral.ingest.reader import SchemaError
 
 log = logging.getLogger("eleitoral.ingest.tse")
 
@@ -40,10 +41,6 @@ DTYPES = {
     "votos": "int32",
     "nr_local": "int32",
 }
-
-
-class SchemaError(ValueError):
-    pass
 
 
 def _csv_member(zf: zipfile.ZipFile) -> str:

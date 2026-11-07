@@ -64,21 +64,42 @@ python -m eleitoral.ingest.tse --year 2022 [--download] [--filter-only]
 5. **Reconciliação:** soma os votos por candidato/cargo/turno e compara com o resultado oficial. Qualquer discrepância é registrada no log e faz o processo falhar.
 6. **Saída:** `data/processed/fact_votos_<ano>.parquet`, com os tipos validados.
 
+### Resultado da reconciliação (2026-11-07)
+
+Bate exatamente nos três anos: votos por candidato, comparecimento, brancos e nulos técnicos por cargo.
+
+| Ano | Candidatos que batem | Inaptos (nulos técnicos) | Comparecimento |
+|---|---|---|---|
+| 2022 | 2603/2603 | 29 | 99.860 |
+| 2024 | 374/374 | 1 | 98.777 |
+| 2026 | 1923/1923 | 5 | 103.188 |
+
+### Tabelas geradas
+
+| Tabela | Linhas (22/24/26) |
+|---|---|
+| `dim_local_votacao` | 80 / 79 / 80 |
+| `dim_secao` | 414 / 432 / 442 |
+| `dim_candidato` | 1623 / 374 / 1189 (só candidatos com voto em Teresópolis) |
+| `fact_votos` | 65.347 / 43.248 / 69.849 |
+| `fact_perfil_secao` | eleitorado: 129.040 / 132.969 / 133.424 |
+
 ## 5. Riscos e mitigações
 
 | Risco | Mitigação |
 |---|---|
-| Colunas mudam entre anos | Mapeamento explícito por ano e validação de cabeçalho |
+| Formato muda entre anos (já ocorreu em `perfil_eleitor_secao` e `eleitorado_local_votacao` em 2026) | Mapeamento explícito por ano; o leitor falha se faltar coluna |
 | Encoding latin-1 × utf-8 | Leitura sempre com `encoding='latin-1'` |
-| Arquivos muito grandes | Leitura em chunks com filtro de município na leitura |
-| 2026 ainda não publicado | Script preparado, com mapeamento pendente |
-| Discrepância com o oficial | Teste de reconciliação obrigatório |
+| Arquivos muito grandes (até 2 GB descompactados) | Leitura em chunks direto do ZIP, com filtro de município |
+| Download truncado sem erro | Retomada com HTTP Range e validação do ZIP |
+| Discrepância com o oficial | Reconciliação obrigatória; o pipeline aborta |
+| Inferência ecológica pouco identificada | Resultado tratado como indicativo; unidades = locais comuns |
 | Nomes de vereadores divergentes entre V1 e V2 | Tabela de de-para revisada manualmente |
 
 ## 6. Próximos passos
 
-1. ~~Baixar as amostras e comparar os cabeçalhos~~ (feito).
-2. ~~Preencher `column_mappings.py`~~ (feito).
-3. ~~Implementar `tse.py`~~ (feito). Falta reconciliar com o resultado oficial por município (`votacao_candidato_munzona`).
-4. Construir as dimensões e os fatos e depois as análises.
-5. Integrar a V2 ao dashboard Streamlit.
+1. ~~Baixar os dados e validar os cabeçalhos~~ (feito).
+2. ~~Ingestão e reconciliação com o resultado oficial~~ (feito: bate 100%).
+3. ~~Dimensões, fatos e análises (swing, transição, clusters)~~ (feito).
+4. Ligar os vereadores da V1 a `dim_candidato` (de-para de nomes).
+5. Integrar a V2 ao dashboard Streamlit (mapa por local, swing, transição, clusters).
