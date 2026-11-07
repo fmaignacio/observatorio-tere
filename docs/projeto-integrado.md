@@ -17,11 +17,13 @@ legislativa de cada vereador com sua base eleitoral por seção e território.
 ### V2 — Eleitoral (a implementar)
 - **Fonte:** Portal de Dados Abertos do TSE.
 
-| Ano | Recurso | Pasta no ZIP |
-|---|---|---|
-| 2022 | RJ — Votação por seção eleitoral | `votacao_secao/` |
-| 2024 | Detalhe da apuração por seção eleitoral | `detalhe_votacao_secao/` |
-| 2026 | A publicar após a eleição | a definir |
+| Ano | Arquivo | Linhas de Teresópolis | Seções | Cargos |
+|---|---|---|---|---|
+| 2022 | `votacao_secao_2022_RJ.zip` | 65.347 | 374 | Gov., Senador, Dep. Fed./Est. |
+| 2024 | `votacao_secao_2024_RJ.zip` | 43.248 | 400 | Prefeito, Vereador |
+| 2026 | `votacao_secao_2026_RJ.zip` | 69.849 | 422 | Gov., Senador (2 vagas), Dep. Fed./Est. |
+
+Cabeçalho idêntico nos três anos (validado em 2026-11-07). Ingestão implementada em `eleitoral/ingest/tse.py`.
 
 - **Pipeline:** `ingest` (download + validação de cabeçalho + filtro Teresópolis + rename) → `transform` (dimensões e fatos) → `analysis`.
 - **Análises previstas:**
@@ -75,8 +77,8 @@ python -m eleitoral.ingest.tse --year 2022 [--download] [--filter-only]
 
 ## 6. Próximos passos
 
-1. Baixar uma amostra de 2022 e de 2024 e comparar os cabeçalhos reais (`head -1`).
-2. Preencher `eleitoral/ingest/column_mappings.py` com as colunas validadas.
-3. Implementar `tse.py` e o teste de reconciliação para 2022.
+1. ~~Baixar as amostras e comparar os cabeçalhos~~ (feito).
+2. ~~Preencher `column_mappings.py`~~ (feito).
+3. ~~Implementar `tse.py`~~ (feito). Falta reconciliar com o resultado oficial por município (`votacao_candidato_munzona`).
 4. Construir as dimensões e os fatos e depois as análises.
 5. Integrar a V2 ao dashboard Streamlit.

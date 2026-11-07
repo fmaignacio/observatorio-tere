@@ -53,10 +53,12 @@ CLI: `python -m eleitoral.ingest.tse --year 2022 [--download] [--filter-only]`
 
 ## Pontos de atenção do TSE
 
-- A pasta dentro do ZIP muda de nome entre anos: `votacao_secao/` (2022) e `detalhe_votacao_secao/` (2024).
-- Os nomes de colunas mudam entre anos (por exemplo, `NR_CANDIDATO` × `NR_VOTAVEL`). O mapeamento fica explícito por ano em `column_mappings.py`, e um ano sem mapeamento faz o script falhar.
-- O filtro de município é feito por código (`CD_MUNICIPIO`), com o nome (`NM_MUNICIPIO == "TERESÓPOLIS"`) apenas como checagem.
-- Os dados de 2026 só existirão depois da publicação pelo TSE.
+- Fonte: `https://cdn.tse.jus.br/estatistica/sead/odsele/votacao_secao/votacao_secao_<ano>_RJ.zip`, que contém um CSV e o `leiame.pdf`.
+- **Validado em 2026-11-07:** 2022, 2024 e 2026 têm o mesmo cabeçalho de 26 colunas (o candidato vem em `NR_VOTAVEL`). Mesmo assim, o mapeamento fica explícito por ano em `column_mappings.py`, e qualquer divergência ou ano sem mapeamento faz o script falhar.
+- Teresópolis tem `CD_MUNICIPIO = 59153` (código TSE, não IBGE). O filtro é feito por esse código, e o nome serve apenas como checagem.
+- O arquivo estadual não traz Presidente. Votos brancos e nulos aparecem como `NR_VOTAVEL` 95 e 96.
+- Em 2026, o Senador soma o dobro de votos dos outros cargos, porque foram 2 vagas.
+- Os downloads grandes podem chegar truncados: confira com `unzip -t` e retome com `curl -C -`.
 
 ## Comandos
 
