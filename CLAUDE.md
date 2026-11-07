@@ -82,6 +82,7 @@ Conjuntos do TSE usados: `votacao_secao` (fato), `votacao_candidato_munzona` e
 - App V1: `streamlit run app.py`
 - Dependências das análises e dos testes: `pip install -r requirements-dev.txt`
 - Pipeline V2 completo: `python -m eleitoral.pipeline`
+- Dados do dashboard (versionados em `data/app/`, cerca de 400 KB): `python -m eleitoral.export_app`. Rode depois do pipeline. A página `pages/2_Eleitoral.py` lê só esses arquivos, então o deploy não precisa dos dados brutos nem de scipy/sklearn.
 - Reconciliação de um ano: `python -m eleitoral.ingest.reconcile --year 2026`
 - Análises:
   - `python -m eleitoral.analysis.swing --de 2022:3 --para 2026:3` (`ano:cd_cargo`)
