@@ -1,13 +1,42 @@
-# Ignorar o ambiente virtual
+# ── Ambientes virtuais ──────────────────────────────────────
 venv/
+.venv/
+env/
 
-# Ignorar ficheiros de cache do Python
+# ── Python ──────────────────────────────────────────────────
 __pycache__/
-*.pyc
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
 
-# Ignorar ficheiros do sistema macOS
+# ── Sistema / IDE ───────────────────────────────────────────
 .DS_Store
+.vscode/
 
+# ── Segredos ────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── V1 Legislativo: bases antigas/intermediárias ────────────
 base_observatorio_teresopolis.csv
 base_observatorio_teresopolis_old.csv
 base_observatorio_teresopolis_spacy.csv
+
+# ── V2 Eleitoral: dados brutos do TSE (ZIPs/CSVs grandes) ───
+# Nunca versionar downloads brutos; reproduzir com
+#   python -m eleitoral.ingest.tse --year <ano> --download
+data/raw/
+*.zip
+
+# Parquets processados são regeneráveis; versionar só se for
+# decidido explicitamente (manter .gitkeep para a pasta existir)
+data/processed/*
+!data/processed/.gitkeep
+
+# ── V3 Evidências: material sensível / não público ──────────
+# Documentos, prints e anexos coletados não vão para o Git.
+evidencias/raw/
+evidencias/privado/
+*.eml
