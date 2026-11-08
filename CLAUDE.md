@@ -96,5 +96,5 @@ Conjuntos do TSE usados: `votacao_secao` (fato), `votacao_candidato_munzona` e
   - `python -m eleitoral.analysis.transition --de 2024:11 --para 2026:3`
   - `python -m eleitoral.analysis.clusters --ano 2026 --cargo 3`
 - Códigos de cargo: 3 Governador, 5 Senador, 6 Dep. Federal, 7 Dep. Estadual, 11 Prefeito, 13 Vereador.
-- V3: `python -m evidencias.coletar` (coleta) · `python -m evidencias.revisar listar` · `... marcar <id> confirmado --tipo ameaca --nota "..."` · `... exportar`
+- V3: `python -m evidencias.coletar` (coleta) · `streamlit run evidencias/app_revisao.py` (tela de revisão, só local) · `python -m evidencias.revisar listar` · `... marcar <id> confirmado --tipo ameaca --nota "..."` · `... exportar`
 - Testes: `pytest tests/`

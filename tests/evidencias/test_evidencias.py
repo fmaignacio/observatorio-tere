@@ -1,4 +1,5 @@
 import csv
+from pathlib import Path
 
 from evidencias import fila, revisar
 from evidencias.base import Achado
@@ -61,3 +62,27 @@ def test_fila_deduplica_e_exporta_sem_dados_pessoais(tmp_path):
     social = next(r for r in rows if r["fonte"] == "bluesky")
     assert social["veiculo"] == "bluesky" and "pessoal" not in social["titulo"] and "fulano" not in social["veiculo"]
     assert "beltrano" not in open(out, encoding="utf-8").read()
+
+
+def test_app_revisao_marca_itens(tmp_path, monkeypatch):
+    from streamlit.testing.v1 import AppTest
+
+    db = tmp_path / "f.sqlite"
+    con = fila.conectar(db)
+    a, b = Achado(fonte="google_news", url="https://n/1", titulo="Caso A"), \
+        Achado(fonte="google_news", url="https://n/2", titulo="Fora do tema")
+    fila.inserir(con, [a, b])
+    monkeypatch.setenv("EVIDENCIAS_DB", str(db))
+
+    at = AppTest.from_file(str(Path(__file__).resolve().parents[2] / "evidencias" / "app_revisao.py")).run()
+    assert not at.exception and len(at.button) >= 6
+    at.selectbox(key=f"tipo_{a.id}").set_value("ameaca")
+    at.text_input(key=f"nota_{a.id}").set_value("conferido")
+    at.button(key=f"confirmado_{a.id}").click().run()
+    at.button(key=f"descartado_{b.id}").click().run()
+    assert not at.exception
+
+    st = {r["id"]: r for r in con.execute("SELECT * FROM achados")}
+    assert (st[a.id]["status"], st[a.id]["tipo_caso"], st[a.id]["nota"]) == ("confirmado", "ameaca", "conferido")
+    assert st[b.id]["status"] == "descartado"
+    assert any("Nenhum item" in i.value for i in at.info)
