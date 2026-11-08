@@ -31,9 +31,13 @@ Cabeçalho idêntico nos três anos (validado em 2026-11-07). Ingestão implemen
   - *Transição:* matriz de transição de votos 2024 × 2026.
   - *Clusters:* agrupamento de seções por comportamento eleitoral e perfil do eleitorado.
 
-### V3 — Evidências (a definir)
-- Repositório de documentos, prints e anexos que embasam as análises das V1 e V2.
-- Material bruto ou sensível fica fora do Git (`evidencias/raw/`, `evidencias/privado/`). Só metadados e referências são versionados.
+### V3 — Evidências (protótipo)
+- **Objetivo:** catalogar relatos de perseguição, intimidação, assédio ou coação política contra pessoas de esquerda e eleitores do Lula em Teresópolis, sempre com fonte verificável.
+- **Coleta** (`python -m evidencias.coletar`): Google Notícias, GDELT, Bluesky e YouTube, com termos que combinam o município e um tipo de ocorrência.
+- **Fila privada de revisão:** SQLite fora do Git. Uma pessoa classifica cada item como caso confirmado, notícia de contexto ou descarte, com tipo de caso e nota.
+- **Catálogo** (`evidencias/catalogo.csv`): só itens revisados. Posts de rede social saem sem texto nem perfil.
+- **Primeira coleta (2026-11-07):** 70 itens. Entre os relevantes estão o boicote a comércios após a eleição de 2026, as notas de repúdio da OAB, da Prefeitura, do Sincomércio e do PT, e a operação da PF sobre ameaças à deputada Talíria Petrone.
+- **Próximos passos:** formulário de denúncia, extração do texto completo das matérias, ligação com discursos na Câmara (V1) e acesso ao Meta Content Library via parceria acadêmica.
 
 ## 3. Modelo de dados
 

@@ -10,7 +10,7 @@ comum. A especificação completa está em `docs/projeto-integrado.md`.
 |---|---|---|---|
 | **V1 — Legislativo** | Sessões da Câmara, PLs, autores, votações e presença (transcrições + Diário Oficial) | Em produção (Streamlit) | `app.py`, `*.ipynb`, `csv/`, `diario_oficial/` |
 | **V2 — Eleitoral** | Votação por seção do TSE (2022, 2024, 2026) para Teresópolis | Planejada | `eleitoral/` |
-| **V3 — Evidências** | Documentos e evidências que dão suporte às análises | Planejada | `evidencias/` |
+| **V3 — Evidências** | Relatos de perseguição, intimidação e coação política em Teresópolis (imprensa e redes) | Protótipo | `evidencias/` |
 
 ## Regras gerais
 
@@ -77,6 +77,13 @@ Conjuntos do TSE usados: `votacao_secao` (fato), `votacao_candidato_munzona` e
   - `eleitorado_local_votacao` 2026: passou a ter um CSV por UF dentro do ZIP;
   - as coordenadas vêm com vírgula decimal em alguns anos.
 
+## V3 — Evidências: regras
+
+- **Foco em relatos de casos**, não em monitorar pessoas comuns. As buscas combinam "Teresópolis" com termos de ocorrência (`evidencias/termos.py`).
+- **Fontes:** Google Notícias (RSS, uso pessoal e não comercial), GDELT (limite de 1 requisição a cada 5 s, às vezes recusa), Bluesky (busca pública) e YouTube (precisa de `YOUTUBE_API_KEY`). Facebook, Instagram e TikTok exigem acesso de pesquisador aprovado, e o WhatsApp não tem API. Não fazer scraping.
+- **LGPD:** opinião política é dado sensível. A fila (`evidencias/privado/fila.sqlite`) nunca vai para o Git. O `catalogo.csv` exportado só traz itens revisados, e posts de rede social entram sem texto nem perfil.
+- **Toda publicação passa por revisão humana:** `pendente` → `confirmado` | `noticia` | `descartado`.
+
 ## Comandos
 
 - App V1: `streamlit run app.py`
@@ -89,4 +96,5 @@ Conjuntos do TSE usados: `votacao_secao` (fato), `votacao_candidato_munzona` e
   - `python -m eleitoral.analysis.transition --de 2024:11 --para 2026:3`
   - `python -m eleitoral.analysis.clusters --ano 2026 --cargo 3`
 - Códigos de cargo: 3 Governador, 5 Senador, 6 Dep. Federal, 7 Dep. Estadual, 11 Prefeito, 13 Vereador.
+- V3: `python -m evidencias.coletar` (coleta) · `streamlit run evidencias/app_revisao.py` (tela de revisão, só local) · `python -m evidencias.revisar listar` · `... marcar <id> confirmado --tipo ameaca --nota "..."` · `... exportar`
 - Testes: `pytest tests/`
